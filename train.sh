@@ -35,8 +35,6 @@ python3 keras_retinanet/keras_retinanet/bin/train.py \
     --steps=$STEPS \
     --epochs=$EPOCHS \
     --backbone=$BACKBONE \
-    --group=retinanet-train-model-selection \
-    --tags=model-selection \
     --snapshot_interval=2 \
     pascal \
     $DATASET
