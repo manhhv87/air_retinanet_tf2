@@ -1,0 +1,8 @@
+bsub -Is -n 8 -W 4:00 -R "rusage[mem=5GB]" -R "span[hosts=1]" bash
+downgrade vs code debugger extension to work with python 3.7
+
+running into kerasreintanet computer overlap import error module not found
+pip install tensorflow==2.11.0 keras==2.11.0
+dont use the pip install --user command
+python setup.py build_ext --inplace and removed the .c and .cos linux filoe for compute overlap
+label on line 707 was not defined, should have been l
