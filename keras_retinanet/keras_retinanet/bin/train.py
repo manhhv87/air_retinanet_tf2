@@ -48,7 +48,7 @@ from ..preprocessing.kitti import KittiGenerator
 from ..preprocessing.open_images import OpenImagesGenerator
 from ..preprocessing.pascal_voc import PascalVocGenerator
 from ..utils.anchors import make_shapes_callback, anchor_targets_bbox
-from ..utils.config import read_config_file, parse_anchor_parameters, parse_pyramid_levels
+from ..utils.config import read_config_file, parse_anchor_parameters
 from ..utils.gpu import setup_gpu
 from ..utils.image import random_visual_effect_generator
 from ..utils.model import freeze as freeze_model
@@ -57,8 +57,6 @@ from ..utils.transform import random_transform_generator
 
 from ..utils.dataset import compute_dataset_metadata
 from ..utils import seed, optimize_tf_parallel_processing
-
-import wandb
 
 def makedirs(path):
     # Intended behavior: try to create the directory,
