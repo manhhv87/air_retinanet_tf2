@@ -98,6 +98,6 @@ setuptools.setup(
         'Programming Language :: Python :: 3 :: Only',
     ],
     ext_modules    = extensions,
-    setup_requires = ["cython>=0.28", "numpy>=1.14.0"]
-    python_requires = '>=3.7, <3.8',
+    setup_requires = ["cython>=0.28", "numpy>=1.14.0"],
+    python_requires = '>=3.7, <3.8'
 )
