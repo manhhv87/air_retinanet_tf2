@@ -65,8 +65,6 @@ def draw_boxes(image, boxes, color, thickness=2):
         color     : The color of the boxes.
         thickness : The thickness of the lines to draw boxes with.
     """
-    # for b in boxes:
-    #     draw_box(image, b, color, thickness=thickness)
     image = np.array(image).astype(np.uint8)
     for b in boxes:
         image = draw_box(image, b, color, thickness=thickness)
@@ -86,15 +84,12 @@ def draw_detections(image, boxes, scores, labels, color=None, label_to_name=None
         score_threshold : Threshold used for determining what detections to draw.
     """
     selection = np.where(scores > score_threshold)[0]
-    # moi them
     image = np.array(image).astype(np.uint8)
 
     for i in selection:
         c = color if color is not None else label_color(labels[i])
-        # draw_box(image, boxes[i, :], color=c)
         image = draw_box(image, boxes[i, :], color=c)
 
-        # draw labels
         if draw_labels:
             caption = (label_to_name(labels[i]) if label_to_name else labels[i]) + ': {0:.2f}'.format(scores[i])
             image = draw_caption(image, boxes[i, :], caption)
@@ -116,19 +111,15 @@ def draw_annotations(image, annotations, color=(0, 255, 0), label_to_name=None, 
     assert('labels' in annotations)
     assert(annotations['bboxes'].shape[0] == annotations['labels'].shape[0])
 
-    # moi them
     image = np.array(image).astype(np.uint8)
 
     for i in range(annotations['bboxes'].shape[0]):
         label   = annotations['labels'][i]
         c       = color if color is not None else label_color(label)
-
-        # moi them
         image   = draw_box(image, annotations['bboxes'][i], color=c)
 
         if draw_labels:
             caption = '{}'.format(label_to_name(label) if label_to_name else label)
             image   = draw_caption(image, annotations['bboxes'][i], caption)
-            # draw_box(image, annotations['bboxes'][i], color=c)
-
+            
     return image

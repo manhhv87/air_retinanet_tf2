@@ -147,12 +147,12 @@ def parse_args(args):
 
     coco_parser = subparsers.add_parser('coco')
     coco_parser.add_argument('coco_path',  help='Path to dataset directory (ie. /tmp/COCO).')
-    coco_parser.add_argument('--coco-set', help='Name of the set to show (defaults to val2017).', default='val2017')
+    coco_parser.add_argument('--coco_set', help='Name of the set to show (defaults to val2017).', default='val2017')
 
     pascal_parser = subparsers.add_parser('pascal')
     pascal_parser.add_argument('pascal_path', help='Path to dataset directory (ie. /tmp/VOCdevkit).')
-    pascal_parser.add_argument('--pascal-set',  help='Name of the set to show (defaults to test).', default='test')
-    pascal_parser.add_argument('--image-extension',   help='Declares the dataset images\' extension.', default='.jpg')
+    pascal_parser.add_argument('--pascal_set',  help='Name of the set to show (defaults to test).', default='test')
+    pascal_parser.add_argument('--image_extension',   help='Declares the dataset images\' extension.', default='.jpg')
 
     kitti_parser = subparsers.add_parser('kitti')
     kitti_parser.add_argument('kitti_path', help='Path to dataset directory (ie. /tmp/kitti).')
@@ -165,35 +165,35 @@ def parse_args(args):
     oid_parser.add_argument('main_dir', help='Path to dataset directory.')
     oid_parser.add_argument('subset', help='Argument for loading a subset from train/validation/test.')
     oid_parser.add_argument('--version',  help='The current dataset version is v4.', default='v4')
-    oid_parser.add_argument('--labels-filter',  help='A list of labels to filter.', type=csv_list, default=None)
-    oid_parser.add_argument('--annotation-cache-dir', help='Path to store annotation cache.', default='.')
-    oid_parser.add_argument('--parent-label', help='Use the hierarchy children of this label.', default=None)
+    oid_parser.add_argument('--labels_filter',  help='A list of labels to filter.', type=csv_list, default=None)
+    oid_parser.add_argument('--annotation_cache_dir', help='Path to store annotation cache.', default='.')
+    oid_parser.add_argument('--parent_label', help='Use the hierarchy children of this label.', default=None)
 
     csv_parser = subparsers.add_parser('csv')
     csv_parser.add_argument('annotations', help='Path to CSV file containing annotations for evaluation.')
     csv_parser.add_argument('classes',     help='Path to a CSV file containing class label mapping.')
 
-    parser.add_argument('--no-resize', help='Disable image resizing.', dest='resize', action='store_false')
+    parser.add_argument('--no_resize', help='Disable image resizing.', dest='resize', action='store_false')
     parser.add_argument('--anchors', help='Show positive anchors on the image.', action='store_true')
-    parser.add_argument('--display-name', help='Display image name on the bottom left corner.', action='store_true')
-    parser.add_argument('--show-annotations', help='Show annotations on the image. Green annotations have anchors, red annotations don\'t and therefore don\'t contribute to training.', action='store_true')
-    parser.add_argument('--random-transform', help='Randomly transform image and annotations.', action='store_true')
-    parser.add_argument('--image-min-side', help='Rescale the image so the smallest side is min_side.', type=int, default=800)
-    parser.add_argument('--image-max-side', help='Rescale the image if the largest side is larger than max_side.', type=int, default=1333)
+    parser.add_argument('--display_name', help='Display image name on the bottom left corner.', action='store_true')
+    parser.add_argument('--show_annotations', help='Show annotations on the image. Green annotations have anchors, red annotations don\'t and therefore don\'t contribute to training.', action='store_true')
+    parser.add_argument('--random_transform', help='Randomly transform image and annotations.', action='store_true')
+    parser.add_argument('--image_min_side', help='Rescale the image so the smallest side is min_side.', type=int, default=800)
+    parser.add_argument('--image_max_side', help='Rescale the image if the largest side is larger than max_side.', type=int, default=1333)
     parser.add_argument('--config', help='Path to a configuration parameters .ini file.')
-    parser.add_argument('--no-gui', help='Do not open a GUI window. Save images to an output directory instead.', action='store_true')
-    parser.add_argument('--output-dir', help='The output directory to save images to if --no-gui is specified.', default='.')
-    parser.add_argument('--flatten-output', help='Flatten the folder structure of saved output images into a single folder.', action='store_true')
-    parser.add_argument('--start-index', type=int, help='Index for first image to view.', default=0)
-    parser.add_argument('--print-anchor-dims', action="store_true", help='Print anchor information')
-    parser.add_argument('--anchor-scale', help='Scale the anchor boxes by this constant (e.g. if your objects are very small)', type=float, default=1.0)
-    parser.add_argument("--foreground-overlap-threshold", help="Minimum overlap (IoU 0.1-0.9) with Anchor and GT box to consider"
+    parser.add_argument('--no_gui', help='Do not open a GUI window. Save images to an output directory instead.', action='store_true')
+    parser.add_argument('--output_dir', help='The output directory to save images to if --no-gui is specified.', default='.')
+    parser.add_argument('--flatten_output', help='Flatten the folder structure of saved output images into a single folder.', action='store_true')
+    parser.add_argument('--start_index', type=int, help='Index for first image to view.', default=0)
+    parser.add_argument('--print_anchor_dims', action="store_true", help='Print anchor information')
+    parser.add_argument('--anchor_scale', help='Scale the anchor boxes by this constant (e.g. if your objects are very small)', type=float, default=1.0)
+    parser.add_argument("--foreground_overlap_threshold", help="Minimum overlap (IoU 0.1-0.9) with Anchor and GT box to consider"
                         "the anchor as positive (i.e. contributes to foreground class learning)", type=float, default=0.5)
     
     return parser.parse_args(args)
 
 
-def run(generator, args, anchor_params, pyramid_levels):
+def run(generator, args, anchor_params):
     """ Main loop.
 
     Args
@@ -206,6 +206,7 @@ def run(generator, args, anchor_params, pyramid_levels):
     # create the display window if necessary
     if not args.no_gui:
         cv2.namedWindow('Image', cv2.WINDOW_NORMAL)
+        cv2.resizeWindow('debug.py', 1280, 720)
         
     while True:
         # load the data
@@ -229,20 +230,20 @@ def run(generator, args, anchor_params, pyramid_levels):
 
             # draw anchors on the image
             if args.anchors:
-                draw_boxes(image, anchors[positive_indices], (255, 255, 0), thickness=1)
+                image = draw_boxes(image, anchors[positive_indices], (255, 255, 0), thickness=1)
 
             # draw annotations on the image
             if args.show_annotations:
                 # draw annotations in red
-                draw_annotations(image, annotations, color=(0, 0, 255), label_to_name=generator.label_to_name)
+                image = draw_annotations(image, annotations, color=(0, 0, 255), label_to_name=generator.label_to_name)
 
                 # draw regressed anchors in green to override most red annotations
                 # result is that annotations without anchors are red, with anchors are green
-                draw_boxes(image, annotations['bboxes'][max_indices[positive_indices], :], (0, 255, 0))
+                image = draw_boxes(image, annotations['bboxes'][max_indices[positive_indices], :], (0, 255, 0))
 
             # display name on the image
             if args.display_name:
-                draw_caption(image, [0, image.shape[0]], os.path.basename(generator.image_path(i)))
+                image = draw_caption(image, [0, image.shape[0]], os.path.basename(generator.image_path(i)))
 
         # write to file and advance if no-gui selected
         if args.no_gui:
@@ -259,8 +260,7 @@ def run(generator, args, anchor_params, pyramid_levels):
         image = draw_caption(image, [10, 50], str(i))
 
         # if we are using the GUI, then show an image
-        # cv2.imshow('debug.py', image)
-        cv2.imshow('Image', image)
+        cv2.imshow('debug.py', image)        
         key = cv2.waitKeyEx()
 
         # press right for next image and left for previous (linux or windows, doesn't work for macOS)
@@ -324,10 +324,6 @@ def main(args=None):
         anchor_params = parse_anchor_parameters(args.config)
         anchor_params.scales *= args.anchor_scale
 
-    # pyramid_levels = None
-    # if args.config and 'pyramid_levels' in args.config:
-    #     pyramid_levels = parse_pyramid_levels(args.config)
-    
     if args.print_anchor_dims:
         print("\n##### Expanding All Anchor Dimensions ######")
         for i, size in enumerate(anchor_params.sizes):

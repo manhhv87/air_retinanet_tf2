@@ -16,10 +16,11 @@ limitations under the License.
 
 
 from tensorflow import keras
+from keras.utils import get_file
 
 from . import retinanet
 from . import Backbone
-from ..utils.image import preprocess_image
+from ..utils.image import preprocess_image_caffe_fast
 
 
 class VGGBackbone(Backbone):
@@ -44,7 +45,7 @@ class VGGBackbone(Backbone):
         else:
             raise ValueError("Backbone '{}' not recognized.".format(self.backbone))
 
-        return keras.utils.get_file(
+        return get_file(
             '{}_weights_tf_dim_ordering_tf_kernels_notop.h5'.format(self.backbone),
             resource,
             cache_subdir='models',
@@ -62,7 +63,7 @@ class VGGBackbone(Backbone):
     def preprocess_image(self, inputs):
         """ Takes as input an image and prepares it for being passed through the network.
         """
-        return preprocess_image(inputs, mode='caffe')
+        return preprocess_image_caffe_fast(inputs, mode='caffe')
 
 
 def vgg_retinanet(num_classes, backbone='vgg16', inputs=None, modifier=None, **kwargs):
@@ -96,11 +97,4 @@ def vgg_retinanet(num_classes, backbone='vgg16', inputs=None, modifier=None, **k
     layer_names = ["block3_pool", "block4_pool", "block5_pool"]
     layer_outputs = [vgg.get_layer(name).output for name in layer_names]
 
-    # C2 not provided
-    backbone_layers = {
-        'C3': layer_outputs[0],
-        'C4': layer_outputs[1],
-        'C5': layer_outputs[2]
-    }
-
-    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=backbone_layers, **kwargs)
+    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=layer_outputs, **kwargs)

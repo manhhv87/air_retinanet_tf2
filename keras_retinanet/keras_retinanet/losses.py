@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import tensorflow
+import tensorflow as tf
 from tensorflow import keras
 
 
@@ -46,20 +46,20 @@ def focal(alpha=0.25, gamma=2.0, cutoff=0.5):
         classification = y_pred
 
         # filter out "ignore" anchors
-        indices        = tensorflow.where(keras.backend.not_equal(anchor_state, -1))
-        labels         = tensorflow.gather_nd(labels, indices)
-        classification = tensorflow.gather_nd(classification, indices)
+        indices        = tf.where(keras.backend.not_equal(anchor_state, -1))
+        labels         = tf.gather_nd(labels, indices)
+        classification = tf.gather_nd(classification, indices)
 
         # compute the focal loss
         alpha_factor = keras.backend.ones_like(labels) * alpha
-        alpha_factor = tensorflow.where(keras.backend.greater(labels, cutoff), alpha_factor, 1 - alpha_factor)
-        focal_weight = tensorflow.where(keras.backend.greater(labels, cutoff), 1 - classification, classification)
+        alpha_factor = tf.where(keras.backend.greater(labels, cutoff), alpha_factor, 1 - alpha_factor)
+        focal_weight = tf.where(keras.backend.greater(labels, cutoff), 1 - classification, classification)
         focal_weight = alpha_factor * focal_weight ** gamma
 
         cls_loss = focal_weight * keras.backend.binary_crossentropy(labels, classification)
 
         # compute the normalizer: the number of positive anchors
-        normalizer = tensorflow.where(keras.backend.equal(anchor_state, 1))
+        normalizer = tf.where(keras.backend.equal(anchor_state, 1))
         normalizer = keras.backend.cast(keras.backend.shape(normalizer)[0], keras.backend.floatx())
         normalizer = keras.backend.maximum(keras.backend.cast_to_floatx(1.0), normalizer)
 
@@ -95,16 +95,16 @@ def smooth_l1(sigma=3.0):
         anchor_state      = y_true[:, :, -1]
 
         # select only positive anchors for loss computation as GT box is not defined for other anchors
-        indices           = tensorflow.where(keras.backend.equal(anchor_state, 1))
-        regression        = tensorflow.gather_nd(regression, indices)
-        regression_target = tensorflow.gather_nd(regression_target, indices)
+        indices           = tf.where(keras.backend.equal(anchor_state, 1))
+        regression        = tf.gather_nd(regression, indices)
+        regression_target = tf.gather_nd(regression_target, indices)
 
         # compute smooth L1 loss
         # f(x) = 0.5 * (sigma * x)^2          if |x| < 1 / sigma / sigma
         #        |x| - 0.5 / sigma / sigma    otherwise
         regression_diff = regression - regression_target
         regression_diff = keras.backend.abs(regression_diff)
-        regression_loss = tensorflow.where(
+        regression_loss = tf.where(
             keras.backend.less(regression_diff, 1.0 / sigma_squared),
             0.5 * sigma_squared * keras.backend.pow(regression_diff, 2),
             regression_diff - 0.5 / sigma_squared

@@ -97,6 +97,7 @@ class Generator(keras.utils.Sequence):
     def on_epoch_end(self):
         if self.shuffle_groups:
             random.shuffle(self.groups)
+        gc.collect()
 
     def size(self):
         """ Size of the dataset.
@@ -379,12 +380,10 @@ class Generator(keras.utils.Sequence):
 
         return inputs, targets
 
-    # them
     def __iter__(self):
         self.iter_idx = 0
         return self
 
-    # them
     def __next__(self):
         """
         Implements iterator interface for the generator.

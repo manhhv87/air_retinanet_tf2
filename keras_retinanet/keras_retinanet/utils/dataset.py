@@ -15,18 +15,10 @@ if __name__ == "__main__" and not __package__:
     __package__ = "keras_retinanet.utils"
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "..", "airutils"))
-import imtools
 
 import hashlib
-import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 import xml.etree.cElementTree as ET
-import copy
-
-from . import transform as tr
-from . import image as im
-from . import visualization as vis
 
 
 def compute_dir_metadata(path, human_readable=True):
@@ -141,83 +133,3 @@ def parse_voc_annotations(filename):
         annotations['labels'][i] = label
 
     return annotations
-
-
-if __name__ == "__main__":
-    ''' misc plotting code, can be safely ignored '''
-
-    import time
-
-    def augment_image(image, annotations, transform, visual_effect):
-        params = im.TransformParameters()
-        image = image.copy()
-        annotations = copy.deepcopy(annotations)
-        # do transformation
-        transform = im.adjust_transform_for_image(transform, image, params.relative_translation)
-        image = im.apply_transform(transform, image, params)
-        for index in range(annotations['bboxes'].shape[0]):
-            annotations['bboxes'][index, :] = tr.clip_aabb(image.shape, tr.transform_aabb(transform, annotations['bboxes'][index, :]))
-        # do visual effect
-        image = visual_effect(image)
-        return image, annotations
-
-
-    def show_image(img, title = '', bgr_to_rgb=True):
-        if bgr_to_rgb:
-            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        # fig = plt.gcf()
-        # fig.set_size_inches(*size)
-        plt.clf()
-        plt.imshow(img)
-        plt.title(title)
-        plt.axis('off')
-        # plt.pause(0.001)
-        plt.show()
-        a = time.time()
-
-    # dataset_path = os.environ["HOME"] + "/Documents/repos/computer_vision/masters-thesis/data/datasets/heridal_keras_retinanet_voc_tiled"
-    # print(compute_dataset_metadata(dataset_path))
-
-    full_image_file = "/Users/pasi.pyrro/Documents/repos/computer_vision/masters-thesis/data/datasets/heridal_keras_retinanet_voc/JPEGImages/train_ZRI_3035.jpg"
-    full_ann_file = "/Users/pasi.pyrro/Documents/repos/computer_vision/masters-thesis/data/datasets/heridal_keras_retinanet_voc/annotations/train_ZRI_3035.xml"
-
-    full_image = im.read_image_bgr(full_image_file)
-    full_annotations = parse_voc_annotations(full_ann_file)
-    full_image = vis.draw_boxes(full_image, full_annotations["bboxes"], (255, 0, 0), thickness=4)
-    full_image = vis.draw_boxes(full_image, np.array([
-        [0, 1500, 2025, 3000],
-        [2000, 0, 4000, 1525],
-        [2000, 1500, 4000, 3000]
-    ]), color=(0, 0, 255), thickness=4)
-    full_image = vis.draw_box(full_image, [0, 0, 2025, 1525],
-                              color=(0, 255, 0), thickness=4)
-
-    image_file = "/Users/pasi.pyrro/Documents/repos/computer_vision/masters-thesis/data/datasets/heridal_keras_retinanet_voc_tiled/JPEGImages/train_ZRI_3035_1.jpg"
-    ann_file = "/Users/pasi.pyrro/Documents/repos/computer_vision/masters-thesis/data/datasets/heridal_keras_retinanet_voc_tiled/annotations/train_ZRI_3035_1.xml"
-
-    image = im.read_image_bgr(image_file)
-    annotations = parse_voc_annotations(ann_file)
-    bbox_image = vis.draw_boxes(image, annotations["bboxes"], (255, 0, 0), thickness=4)
-
-    transform = tr.rotation(0.5)
-    visual_effect = im.VisualEffect()
-
-    transformed_image, transformed_annotations = augment_image(image, annotations, transform, visual_effect)
-    transformed_image = vis.draw_boxes(transformed_image, transformed_annotations["bboxes"], (255, 0, 0), thickness=4)
-
-    visual_effect = im.VisualEffect(equalize_chance=1)
-
-    augmented_image, augmented_annotations = augment_image(image, annotations, transform, visual_effect)
-    augmented_image = vis.draw_boxes(augmented_image, augmented_annotations["bboxes"], (255, 0, 0), thickness=4)
-
-    print(f"Execution took {time.time()-a:.3f} s")
-
-    fig = imtools.create_grid_plot([full_image, bbox_image, transformed_image, augmented_image], [
-        "Input image tiling",
-        "Tile cropping and bounding\nbox transformation",    
-        "Geometric transformation to image\nand bounding boxes",
-        "Color operation to image"
-    ])
-    fig.savefig("/Users/pasi.pyrro/Documents/repos/computer_vision/masters-thesis/data/misc/testfig.png", bbox_inches="tight", dpi=100)
-
-    # show_image(image, "rotated & added noise")

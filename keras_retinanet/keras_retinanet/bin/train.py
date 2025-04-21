@@ -24,7 +24,6 @@ import os
 import sys
 import warnings
 import numpy as np
-import random
 import functools
 
 from tensorflow import keras
@@ -37,7 +36,6 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "keras_retinanet.bin"
 
 # Change these to absolute imports if you copy this script outside the keras_retinanet package.
-from .. import layers  # noqa: F401
 from .. import losses
 from .. import models
 from ..callbacks import RedirectModel
@@ -106,7 +104,7 @@ def create_models(backbone_retinanet, num_classes, weights, args):
     # load anchor parameters, or pass None (so that defaults will be used)
     anchor_params = None
     num_anchors   = None
-    pyramid_levels = 5
+    num_pyramid_levels = 5
     if args.config and 'anchor_parameters' in args.config:
         anchor_params = parse_anchor_parameters(args.config)
         num_anchors   = anchor_params.num_anchors()
@@ -122,14 +120,14 @@ def create_models(backbone_retinanet, num_classes, weights, args):
     if args.multi_gpu > 1:
         from keras.utils import multi_gpu_model
         with tf.device('/cpu:0'):
-            model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, pyramid_levels=num_pyramid_levels, modifier=modifier, ), weights=weights, skip_mismatch=True)
+            model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, pyramid_levels=num_pyramid_levels, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = multi_gpu_model(model, gpus=args.multi_gpu)
     else:
         model          = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, pyramid_levels=num_pyramid_levels, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = model
 
     # make prediction model
-    prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params, pyramid_levels=num_pyramid_levels)
+    prediction_model = retinanet_bbox(model=model, anchor_params=anchor_params)
 
     # compile model
     training_model.compile(
@@ -137,7 +135,7 @@ def create_models(backbone_retinanet, num_classes, weights, args):
             'regression'    : losses.smooth_l1(),
             'classification': losses.focal(alpha=args.loss_alpha_factor)
         },
-        optimizer=keras.optimizers.Adam(lr=args.lr, clipnorm=args.optimizer_clipnorm)
+        optimizer=keras.optimizers.Adam(lr=args.lr, clipnorm=0.001)
     )
 
     return model, training_model, prediction_model
@@ -162,7 +160,6 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
 
     if args.tensorboard_dir:
         makedirs(args.tensorboard_dir)
-
         tensorboard_callback = keras.callbacks.TensorBoard(
             log_dir                = args.tensorboard_dir,
             histogram_freq         = 0,
@@ -220,7 +217,6 @@ def create_callbacks(model, training_model, prediction_model, validation_generat
         min_lr     = 0
     ))
 
-    # if args.evaluation and validation_generator:
     callbacks.append(keras.callbacks.EarlyStopping(
         monitor    = 'mAP',
         patience   = args.early_stop_patience,
@@ -284,7 +280,7 @@ def create_generators(args, preprocess_image):
             max_effects=1
         )
     else:
-        transform_generator = None # transform_generator = random_transform_generator(flip_x_chance=0.5)
+        transform_generator = None  # random_transform_generator(flip_x_chance=0.5)
         visual_effect_generator = None
 
     if args.dataset_type == 'coco':
@@ -429,7 +425,7 @@ def parse_args(args):
 
     pascal_parser = subparsers.add_parser('pascal')
     pascal_parser.add_argument('pascal_path', help='Path to dataset directory (ie. /tmp/VOCdevkit).')
-    pascal_parser.add_argument('--image-extension',   help='Declares the dataset images\' extension.', default='.jpg')
+    pascal_parser.add_argument('--image_extension',   help='Declares the dataset images\' extension.', default='.jpg')
 
     kitti_parser = subparsers.add_parser('kitti')
     kitti_parser.add_argument('kitti_path', help='Path to dataset directory (ie. /tmp/kitti).')
@@ -443,14 +439,14 @@ def parse_args(args):
     oid_parser = subparsers.add_parser('oid')
     oid_parser.add_argument('main_dir', help='Path to dataset directory.')
     oid_parser.add_argument('--version',  help='The current dataset version is v4.', default='v4')
-    oid_parser.add_argument('--labels-filter',  help='A list of labels to filter.', type=csv_list, default=None)
-    oid_parser.add_argument('--annotation-cache-dir', help='Path to store annotation cache.', default='.')
-    oid_parser.add_argument('--parent-label', help='Use the hierarchy children of this label.', default=None)
+    oid_parser.add_argument('--labels_filter',  help='A list of labels to filter.', type=csv_list, default=None)
+    oid_parser.add_argument('--annotation_cache_dir', help='Path to store annotation cache.', default='.')
+    oid_parser.add_argument('--parent_label', help='Use the hierarchy children of this label.', default=None)
 
     csv_parser = subparsers.add_parser('csv')
     csv_parser.add_argument('annotations', help='Path to CSV file containing annotations for training.')
     csv_parser.add_argument('classes', help='Path to a CSV file containing class label mapping.')
-    csv_parser.add_argument('--val-annotations', help='Path to CSV file containing annotations for validation (optional).')
+    csv_parser.add_argument('--val_annotations', help='Path to CSV file containing annotations for validation (optional).')
 
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--snapshot',          help='Resume training from a snapshot.')
@@ -491,7 +487,7 @@ def parse_args(args):
     # Fit generator arguments
     parser.add_argument('--multiprocessing',  help='Use multiprocessing in fit_generator.', action='store_false')
     parser.add_argument('--workers',          help='Number of generator workers.', type=int, default=1)
-    parser.add_argument('--max-queue-size',   help='Queue length for multiprocessing workers in fit_generator.', type=int, default=16)
+    parser.add_argument('--max_queue_size',   help='Queue length for multiprocessing workers in fit_generator.', type=int, default=16)
 
     # misc   
     parser.add_argument("--seed", help="Fix various random seeds for more reproducible results.", type=int)
@@ -524,23 +520,6 @@ def main(args=None):
         path_key = "coco_path"
 
     arg_dict = vars(args)
-
-    if "SLURM_JOB_ID" in os.environ:
-        print("Slurm Job ID is", os.environ["SLURM_JOB_ID"])
-        try:
-            arg_dict[path_key] = arg_dict[path_key].replace("UNIQUE_JOB_FOLDER", os.environ["SLURM_JOB_ID"])
-        except KeyError: # csv dataset
-            arg_dict["annotations"] = arg_dict["annotations"].replace("UNIQUE_JOB_FOLDER", os.environ["SLURM_JOB_ID"])
-            arg_dict["classes"] = arg_dict["classes"].replace("UNIQUE_JOB_FOLDER", os.environ["SLURM_JOB_ID"])
-            arg_dict["val_annotations"] = arg_dict["val_annotations"].replace("UNIQUE_JOB_FOLDER", os.environ["SLURM_JOB_ID"])
-    else:
-        try:
-            arg_dict[path_key] = arg_dict[path_key].replace("UNIQUE_JOB_FOLDER", "sar-uav-cv")
-        except KeyError: # csv dataset
-            arg_dict["annotations"] = arg_dict["annotations"].replace("UNIQUE_JOB_FOLDER", "sar-uav-cv")
-            arg_dict["classes"] = arg_dict["classes"].replace("UNIQUE_JOB_FOLDER", "sar-uav-cv")
-            arg_dict["val_annotations"] = arg_dict["val_annotations"].replace("UNIQUE_JOB_FOLDER", "sar-uav-cv")
-
 
     print("Computing and saving dataset metadata, this may take a while...")
     try:
@@ -603,10 +582,6 @@ def main(args=None):
             # config=args.config
         )
 
-    if "AIR_VERBOSE" in os.environ:
-        # print model summary
-        print(model.summary())
-
     # this lets the generator compute backbone layer shapes using the actual backbone model
     if 'vgg' in args.backbone or 'densenet' in args.backbone:
         train_generator.compute_shapes = make_shapes_callback(model)
@@ -620,7 +595,7 @@ def main(args=None):
         training_model,
         prediction_model,
         validation_generator,
-        args,
+        args
     )
 
     if not args.compute_val_loss:

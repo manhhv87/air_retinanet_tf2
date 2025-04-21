@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-import tensorflow
+import tensorflow as tf
 from tensorflow import keras
 
 
@@ -63,7 +63,7 @@ def shift(shape, stride, anchors):
     shift_x = (keras.backend.arange(0, shape[1], dtype=keras.backend.floatx()) + keras.backend.constant(0.5, dtype=keras.backend.floatx())) * stride
     shift_y = (keras.backend.arange(0, shape[0], dtype=keras.backend.floatx()) + keras.backend.constant(0.5, dtype=keras.backend.floatx())) * stride
 
-    shift_x, shift_y = tensorflow.meshgrid(shift_x, shift_y)
+    shift_x, shift_y = tf.meshgrid(shift_x, shift_y)
     shift_x = keras.backend.reshape(shift_x, [-1])
     shift_y = keras.backend.reshape(shift_y, [-1])
 
@@ -92,16 +92,16 @@ def map_fn(*args, **kwargs):
     if "shapes" in kwargs:
         shapes = kwargs.pop("shapes")
         dtype = kwargs.pop("dtype")
-        sig = [tensorflow.TensorSpec(shapes[i], dtype=t) for i, t in
+        sig = [tf.TensorSpec(shapes[i], dtype=t) for i, t in
                enumerate(dtype)]
 
         # Try to use the new feature fn_output_signature in TF 2.3, use fallback if this is not available
         try:
-            return tensorflow.map_fn(*args, **kwargs, fn_output_signature=sig)
+            return tf.map_fn(*args, **kwargs, fn_output_signature=sig)
         except TypeError:
             kwargs["dtype"] = dtype
 
-    return tensorflow.map_fn(*args, **kwargs)
+    return tf.map_fn(*args, **kwargs)
 
 
 def resize_images(images, size, method='bilinear', align_corners=False):
@@ -111,9 +111,9 @@ def resize_images(images, size, method='bilinear', align_corners=False):
         method: The method used for interpolation. One of ('bilinear', 'nearest', 'bicubic', 'area').
     """
     methods = {
-        'bilinear': tensorflow.image.ResizeMethod.BILINEAR,
-        'nearest' : tensorflow.image.ResizeMethod.NEAREST_NEIGHBOR,
-        'bicubic' : tensorflow.image.ResizeMethod.BICUBIC,
-        'area'    : tensorflow.image.ResizeMethod.AREA,
+        'bilinear': tf.image.ResizeMethod.BILINEAR,
+        'nearest' : tf.image.ResizeMethod.NEAREST_NEIGHBOR,
+        'bicubic' : tf.image.ResizeMethod.BICUBIC,
+        'area'    : tf.image.ResizeMethod.AREA,
     }
-    return tensorflow.compat.v1.image.resize_images(images, size, methods[method], align_corners)
+    return tf.compat.v1.image.resize_images(images, size, methods[method], align_corners)

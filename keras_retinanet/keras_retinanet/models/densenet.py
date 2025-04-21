@@ -15,6 +15,8 @@ limitations under the License.
 """
 
 from tensorflow import keras
+from keras.applications import densenet
+from keras.utils import get_file
 
 from . import retinanet
 from . import Backbone
@@ -22,9 +24,9 @@ from ..utils.image import preprocess_image
 
 
 allowed_backbones = {
-    'densenet121': ([6, 12, 24, 16], keras.applications.densenet.DenseNet121),
-    'densenet169': ([6, 12, 32, 32], keras.applications.densenet.DenseNet169),
-    'densenet201': ([6, 12, 48, 32], keras.applications.densenet.DenseNet201),
+    'densenet121': ([6, 12, 24, 16], densenet.DenseNet121),
+    'densenet169': ([6, 12, 32, 32], densenet.DenseNet169),
+    'densenet201': ([6, 12, 48, 32], densenet.DenseNet201),
 }
 
 
@@ -52,7 +54,7 @@ class DenseNetBackbone(Backbone):
             raise ValueError('Weights for "channels_first" format are not available.')
 
         weights_url = origin + file_name.format(self.backbone)
-        return keras.utils.get_file(file_name.format(self.backbone), weights_url, cache_subdir='models')
+        return get_file(file_name.format(self.backbone), weights_url, cache_subdir='models')
 
     def validate(self):
         """ Checks whether the backbone string is correct.
@@ -99,13 +101,6 @@ def densenet_retinanet(num_classes, backbone='densenet121', inputs=None, modifie
         model = modifier(model)
 
     # create the full model
-    backbone_layers = {
-        'C2': model.outputs[0],
-        'C3': model.outputs[1],
-        'C4': model.outputs[2],
-        'C5': model.outputs[3]
-    }
-
-    model = retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=backbone_layers, **kwargs)
+    model = retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=model.outputs, **kwargs)
 
     return model

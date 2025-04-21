@@ -32,11 +32,9 @@ from .. import models
 from ..preprocessing.inference import InferenceGenerator
 from ..utils.anchors import make_shapes_callback
 from ..utils.config import read_config_file, parse_anchor_parameters
-from ..utils.eval import get_detections
-from ..utils.image import preprocess_image_caffe_fast
+from ..utils.eval import _get_detections
 from ..utils.tf_version import check_tf_version
 
-from ..utils.dataset import compute_dataset_metadata
 from ..utils import seed, optimize_tf_parallel_processing
 
 import multiprocessing
@@ -90,14 +88,6 @@ def main(args=None):
             args.backbone = re.search(r"\_([A-Za-z]*[^\-]+[A-Za-z]+\d+?)\_", base_name).group(1)
         except AttributeError:
             raise ValueError("Cannot infer backbone from model name: " + base_name)
-
-    if "SLURM_JOB_ID" in os.environ:
-        print("Slurm Job ID is", os.environ["SLURM_JOB_ID"])
-        args.input_image_folder = args.input_image_folder.replace("UNIQUE_JOB_FOLDER", os.environ["SLURM_JOB_ID"])
-        args.output_image_folder = args.output_image_folder.replace("UNIQUE_JOB_FOLDER", os.environ["SLURM_JOB_ID"])
-    else:
-        args.input_image_folder =  args.input_image_folder.replace("UNIQUE_JOB_FOLDER", "sar-uav-cv")
-        args.output_image_folder =  args.output_image_folder.replace("UNIQUE_JOB_FOLDER", "sar-uav-cv")
 
     # optionally seed random number generators
     if args.seed:
@@ -153,17 +143,16 @@ def main(args=None):
                                     )
     
     print(f"Running inference on image folder: {args.input_image_folder}")
-    all_detections, all_inference_times = get_detections(generator,
-                                                         model,
-                                                         score_threshold=args.score_threshold,
-                                                         top_k=args.top_k,
-                                                         nms_threshold=args.nms_threshold,
-                                                         nms_mode=args.nms_mode,
-                                                         max_detections=args.max_detections,
-                                                         save_path=args.output_image_folder,
-                                                         tiling_dim=args.image_tiling_dim,
-                                                         profile=args.profile
-                                                        )
+    all_detections, all_inference_times = _get_detections(generator, 
+                                                          model,
+                                                          score_threshold=args.score_threshold,
+                                                          top_k=args.top_k,
+                                                          nms_threshold=args.nms_threshold,
+                                                          nms_mode=args.nms_mode,
+                                                          max_detections=args.max_detections,
+                                                          save_path=args.output_image_folder,
+                                                          tiling_dim=args.image_tiling_dim,
+                                                          profile=args.profile)
     print("Inference done! Reporting results...\n")
 
     # iterate over images
@@ -183,6 +172,7 @@ def main(args=None):
     print(f'Average inference time per image: {np.mean(all_inference_times):.4f} s')
     print("-------------------------------------------")
     print(f"Saved output to {args.output_image_folder}")
+
 
 if __name__ == '__main__':
     main()

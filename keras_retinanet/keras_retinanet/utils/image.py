@@ -25,8 +25,6 @@ if not __package__:
 
 import numpy as np
 import cv2
-
-
 import imghdr
 from PIL import Image, ImageOps
 from functools import partial
@@ -51,14 +49,6 @@ def read_image_bgr(path):
     Args
         path: Path to the image.
     """
-    # image = np.asarray(Image.open(path).convert('RGB')) 
-    # image = cv2.imread(path, cv2.IMREAD_UNCHANGED) # modified for uint16 input
-    # if len(image.shape) == 2:
-    #     H, W = image.shape
-    #     tmp = np.zeros((H,W,3))
-    #     tmp[:,:,1] = image
-    #     image = tmp       
-    # return image # BGR
     # We deliberately don't use cv2.imread here, since it gives no feedback on errors while reading the image.
     image = np.ascontiguousarray(Image.open(path).convert('RGB'))
     return image[:, :, ::-1]
@@ -100,7 +90,6 @@ def preprocess_image(x, mode='caffe'):
     elif mode == 'caffe':
         x /= 257. # uint16 input
         x -= [103.939, 116.779, 123.68]
-    # moi them 
     elif mode == 'torch':
         x /= 255.
         x -= [0.485, 0.456, 0.406]

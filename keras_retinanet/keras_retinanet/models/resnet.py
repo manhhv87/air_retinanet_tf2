@@ -15,12 +15,13 @@ limitations under the License.
 """
 
 from tensorflow import keras
+from keras.utils import get_file
 import keras_resnet
 import keras_resnet.models
 
 from . import retinanet
 from . import Backbone
-from ..utils.image import preprocess_image
+from ..utils.image import preprocess_image_caffe_fast
 
 
 class ResNetBackbone(Backbone):
@@ -52,7 +53,7 @@ class ResNetBackbone(Backbone):
         elif depth == 152:
             checksum = '6ee11ef2b135592f8031058820bb9e71'
 
-        return keras.utils.get_file(
+        return get_file(
             filename,
             resource,
             cache_subdir='models',
@@ -71,7 +72,7 @@ class ResNetBackbone(Backbone):
     def preprocess_image(self, inputs):
         """ Takes as input an image and prepares it for being passed through the network.
         """
-        return preprocess_image(inputs, mode='caffe')
+        return preprocess_image_caffe_fast(inputs)
 
 
 def resnet_retinanet(num_classes, backbone='resnet50', inputs=None, modifier=None, **kwargs):
@@ -108,15 +109,7 @@ def resnet_retinanet(num_classes, backbone='resnet50', inputs=None, modifier=Non
         resnet = modifier(resnet)
 
     # create the full model
-    # resnet.outputs contains 4 layers
-    backbone_layers = {
-        'C2': resnet.outputs[0],
-        'C3': resnet.outputs[1],
-        'C4': resnet.outputs[2],
-        'C5': resnet.outputs[3]
-    }
-
-    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=backbone_layers, **kwargs)
+    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=resnet.outputs[1:], **kwargs)
 
 
 def resnet50_retinanet(num_classes, inputs=None, **kwargs):

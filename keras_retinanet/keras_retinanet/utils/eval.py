@@ -40,7 +40,7 @@ import matplotlib.pyplot as plt
 
 from compute_overlap import compute_overlap
 from .transform import clip_aabb_array
-from .image import resize_image as resize_func
+# from .image import resize_image as resize_func
 from .visualization import draw_detections, draw_annotations
 from ..preprocessing.pascal_voc import voc_classes, PascalVocGenerator
 from ..preprocessing.inference import InferenceGenerator
@@ -110,7 +110,7 @@ def run_inference_on_image(
     
     tile_size = imtools.grid_dim_to_tile_size(image, tiling_dim, overlap=tiling_overlap)
     image_parts, offsets = imtools.create_overlapping_tiled_mosaic(image, tile_size=tile_size,
-                                                                    overlap=tiling_overlap, no_fill=True)
+                                                                   overlap=tiling_overlap, no_fill=True)
     
     all_boxes, all_scores, all_labels = [], [], []
 
@@ -187,8 +187,7 @@ def _get_detections(
         top_k=50,
         nms_threshold=0.5,
         max_inflation_factor=100,
-        nms_mode="argmax",
-        wandb_logging=False,
+        nms_mode="argmax",        
         profile=False
 ):
     """ Get the detections from the model using the generator.
@@ -225,11 +224,9 @@ def _get_detections(
         # this is probably computational bottleneck, that can be alleviated with async queues
         # do not include in perf measurement
         image_name, image_ext = os.path.splitext(os.path.basename(generator.image_path(i)))
-        # raw_image    = generator.load_image(i)
         raw_image = generator.load_image(i)
-        # image, scale = generator.resize_image(raw_image.copy())
         image = raw_image.copy()
-        start = time.perf_counter()     # them
+        start = time.perf_counter()     
 
         ############ Performance measurement per image start point ############
         image = generator.preprocess_image(image)
@@ -247,32 +244,6 @@ def _get_detections(
 
         ############ Performance measurement per image end point ############
         inference_time = time.perf_counter() - start
-
-        # if keras.backend.image_data_format() == 'channels_first':
-        #     image = image.transpose((2, 0, 1))
-
-        # # run network
-        # start = time.time()
-        # boxes, scores, labels = model.predict_on_batch(np.expand_dims(image, axis=0))[:3]
-        # inference_time = time.time() - start
-
-        # # correct boxes for image scale
-        # boxes /= scale
-
-        # # select indices which have a score above the threshold
-        # indices = np.where(scores[0, :] > score_threshold)[0]
-
-        # # select those scores
-        # scores = scores[0][indices]
-
-        # # find the order with which to sort the scores
-        # scores_sort = np.argsort(-scores)[:max_detections]
-
-        # # select detections
-        # image_boxes      = boxes[0, indices[scores_sort], :]
-        # image_scores     = scores[scores_sort]
-        # image_labels     = labels[0, indices[scores_sort]]
-        # image_detections = np.concatenate([image_boxes, np.expand_dims(image_scores, axis=1), np.expand_dims(image_labels, axis=1)], axis=1)
 
         if save_path is not None:
             if HERIDAL_VIS_SETTINGS:
@@ -385,8 +356,6 @@ def evaluate(
     all_annotations    = _get_annotations(generator)
     average_precisions = {}
 
-    set_name = generator.set_name
-
     # all_detections = pickle.load(open('all_detections.pkl', 'rb'))
     # all_annotations = pickle.load(open('all_annotations.pkl', 'rb'))
     # pickle.dump(all_detections, open('all_detections.pkl', 'wb'))
@@ -427,24 +396,12 @@ def evaluate(
                 # overlaps            = compute_overlap(np.expand_dims(d, axis=0), annotations)
                 overlaps = all_overlaps[j]  # moi
 
-                # them
                 if mode == "voc2012":
                     start_idx = np.argmax(overlaps)
                     end_idx = start_idx + 1
                 else: # SAR-APD evaluation checks all GT labels
                     start_idx = 0
                     end_idx = overlaps.shape[0]
-
-                # assigned_annotation = np.argmax(overlaps, axis=1)
-                # max_overlap         = overlaps[0, assigned_annotation]
-
-                # if max_overlap >= iou_threshold and assigned_annotation not in detected_annotations:
-                #     false_positives = np.append(false_positives, 0)
-                #     true_positives  = np.append(true_positives, 1)
-                #     detected_annotations.append(assigned_annotation)
-                # else:
-                #     false_positives = np.append(false_positives, 1)
-                #     true_positives  = np.append(true_positives, 0)
 
                 # iterate over ground truth labels
                 for annotation in range(start_idx, end_idx):
@@ -478,83 +435,11 @@ def evaluate(
         recall    = true_positives / num_annotations
         precision = true_positives / np.maximum(true_positives + false_positives, np.finfo(np.float64).eps)
 
-        try:
-            overall_recall = recall[-1]
-            overall_precision = precision[-1]
-        except IndexError:
-            overall_recall = 0
-            overall_precision = 0
-        
-        if isinstance(generator, PascalVocGenerator):
-            class_name = class_id_to_voc_label[int(label)]
-        else:
-            class_name = str(int(label))
-
-        try:
-            num_tp = true_positives[-1]
-        except IndexError:
-            num_tp = 0
-        
-        try:
-            num_fp = false_positives[-1]
-        except IndexError:
-            num_fp = 0
-
         # compute average precision
-        # average_precision  = _compute_ap(recall, precision)        
         average_precision  = _compute_ap(recall, precision)
-
-        print(
-            f"\n{set_name}_num_tp_{class_name}: {num_tp}\n"
-            f"{set_name}_num_fp_{class_name}: {num_fp}\n" 
-            f"{set_name}_num_anns_{class_name}: {num_annotations}\n"
-            f"{set_name}_recall_{class_name}: {overall_recall}\n"
-            f"{set_name}_precision_{class_name}: {overall_precision}\n"
-            f"{set_name}_mAP_{class_name}: {average_precision}\n"
-        )
         average_precisions[label] = average_precision, num_annotations
 
     # inference time
     mean_inference_time = np.sum(all_inference_times) / generator.size()
 
     return average_precisions, mean_inference_time
-
-
-if __name__ == "__main__":
-    ''' test something here '''
-
-    from time import perf_counter
-
-    bbox0 = np.array([10,20,20,30])
-    bbox1 = np.array([100,200,200,300])
-    bbox2 = np.array([1000,2000,2000,3000])
-    bbox3 = np.array([1100,2100,2000,3000])
-
-    bboxes0 = np.tile(bbox0, (100, 1)).astype(float) + np.random.normal(scale=2, size=(100,4))    
-    bboxes1 = np.tile(bbox1, (100, 1)).astype(float) + np.random.normal(scale=10, size=(100,4))
-    bboxes2 = np.tile(bbox2, (500, 1)).astype(float) + np.random.normal(scale=10, size=(500,4))
-    bboxes3 = np.tile(bbox3, (200, 1)).astype(float) + np.random.normal(scale=10, size=(200,4))
-    boxes = np.concatenate((bboxes0, bboxes1, bboxes2, bboxes3), axis=0) #[:, [0,2,1,3]]
-    
-    scores = np.random.rand(len(boxes))
-
-    labels = np.random.randint(0, 10, len(boxes))
-
-    merged_labels = []
-
-    t1 = perf_counter()
-    merged_boxes, merged_scores, merged_labels = merge_boxes_per_label(boxes, scores, labels)
-    # merged_boxes, merged_scores = merge_overlapping_boxes(boxes, scores, iou_threshold=-100.001)
-
-    # merged_boxes, merged_scores, merged_labels = merge_boxes_per_label(*[np.array([])]*3)
-    # merged_boxes, merged_scores = merge_overlapping_boxes(np.array([]), np.array([]), iou_threshold=-100.001)
-
-    print("Time elapsed", perf_counter()-t1)
-    print("==boxes==")
-    print(merged_boxes)
-    print("==scores==")
-    print(merged_scores)
-    print("==labels==")
-    print(merged_labels)
-    print("==merged-length==")
-    print(len(merged_boxes))

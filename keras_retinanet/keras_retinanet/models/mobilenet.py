@@ -15,6 +15,8 @@ limitations under the License.
 """
 
 from tensorflow import keras
+from keras.applications import mobilenet
+from keras.utils import get_file
 from ..utils.image import preprocess_image
 
 from . import retinanet
@@ -56,8 +58,9 @@ class MobileNetBackbone(Backbone):
             alpha_text = '2_5'
 
         model_name = 'mobilenet_{}_{}_tf_no_top.h5'.format(alpha_text, rows)
-        weights_url = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.6/' + model_name
-        weights_path = keras.utils.get_file(model_name, weights_url, cache_subdir='models')
+        # weights_url = 'https://github.com/fchollet/deep-learning-models/releases/download/v0.6/' + model_name
+        weights_url = mobilenet.mobilenet.BASE_WEIGHT_PATH + model_name
+        weights_path = get_file(model_name, weights_url, cache_subdir='models')
 
         return weights_path
 
@@ -93,7 +96,7 @@ def mobilenet_retinanet(num_classes, backbone='mobilenet224_1.0', inputs=None, m
     if inputs is None:
         inputs = keras.layers.Input((None, None, 3))
 
-    backbone = keras.applications.mobilenet.MobileNet(input_tensor=inputs, alpha=alpha, include_top=False, pooling=None, weights=None)
+    backbone = mobilenet.MobileNet(input_tensor=inputs, alpha=alpha, include_top=False, pooling=None, weights=None)
 
     # create the full model
     layer_names = ['conv_pw_5_relu', 'conv_pw_11_relu', 'conv_pw_13_relu']
@@ -104,11 +107,4 @@ def mobilenet_retinanet(num_classes, backbone='mobilenet224_1.0', inputs=None, m
     if modifier:
         backbone = modifier(backbone)
 
-    # C2 not provided
-    backbone_layers = {
-        'C3': backbone.outputs[0],
-        'C4': backbone.outputs[1],
-        'C5': backbone.outputs[2]
-    }
-
-    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=backbone_layers, **kwargs)
+    return retinanet.retinanet(inputs=inputs, num_classes=num_classes, backbone_layers=backbone.outputs, **kwargs)

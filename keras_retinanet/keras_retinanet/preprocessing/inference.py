@@ -19,8 +19,6 @@ from ..utils.image import read_image_bgr, is_image
 from .pascal_voc import voc_classes
 
 import os
-import numpy as np
-from six import raise_from
 from PIL import Image
 
 try:

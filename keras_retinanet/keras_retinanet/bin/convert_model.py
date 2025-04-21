@@ -42,11 +42,11 @@ def parse_args(args):
     parser.add_argument('--no-nms', help='Disables non maximum suppression.', dest='nms', action='store_false')
     parser.add_argument('--no-class-specific-filter', help='Disables class specific filtering.', dest='class_specific_filter', action='store_false')
     parser.add_argument('--config', help='Path to a configuration parameters .ini file.')
-    parser.add_argument('--anchor-scale', help='Scale the anchor boxes by this constant (e.g. if your objects are very small)', type=float, default=1.0)
-    parser.add_argument('--nms-threshold', help='Value for non maximum suppression threshold.', type=float, default=0.5)
-    parser.add_argument('--score-threshold', help='Threshold for prefiltering boxes.', type=float, default=0.05)
-    parser.add_argument('--max-detections', help='Maximum number of detections to keep.', type=int, default=300)
-    parser.add_argument('--parallel-iterations', help='Number of batch items to process in parallel.', type=int, default=32)
+    parser.add_argument('--anchor_scale', help='Scale the anchor boxes by this constant (e.g. if your objects are very small)', type=float, default=1.0)
+    parser.add_argument('--nms_threshold', help='Value for non maximum suppression threshold.', type=float, default=0.5)
+    parser.add_argument('--score_threshold', help='Threshold for prefiltering boxes.', type=float, default=0.05)
+    parser.add_argument('--max_detections', help='Maximum number of detections to keep.', type=int, default=300)
+    parser.add_argument('--parallel_iterations', help='Number of batch items to process in parallel.', type=int, default=32)
 
     return parser.parse_args(args)
 
@@ -64,15 +64,12 @@ def main(args=None):
     setup_gpu('cpu')
 
     # optionally load config parameters
-    anchor_parameters = None
-    # pyramid_levels = None
+    anchor_parameters = None    
     if args.config:
         args.config = read_config_file(args.config)
         if 'anchor_parameters' in args.config:
             anchor_parameters = parse_anchor_parameters(args.config)
             anchor_parameters.scales *= args.anchor_scale
-        # if 'pyramid_levels' in args.config:
-        #     pyramid_levels = parse_pyramid_levels(args.config)
 
     # load the model
     model = models.load_model(args.model_in, backbone_name=args.backbone)
@@ -86,8 +83,7 @@ def main(args=None):
         model,
         nms=args.nms,
         class_specific_filter=args.class_specific_filter,
-        anchor_params=anchor_parameters,
-        # pyramid_levels=pyramid_levels,
+        anchor_params=anchor_parameters,        
         nms_threshold=args.nms_threshold,
         score_threshold=args.score_threshold,
         max_detections=args.max_detections,

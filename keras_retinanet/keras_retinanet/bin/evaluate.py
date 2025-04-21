@@ -32,11 +32,9 @@ from ..preprocessing.kitti import KittiGenerator
 from ..utils.anchors import make_shapes_callback
 from ..utils.config import read_config_file, parse_anchor_parameters
 from ..utils.eval import evaluate
-from ..utils.image import preprocess_image_caffe_fast
 from ..utils.gpu import setup_gpu
 from ..utils.tf_version import check_tf_version
 
-from ..utils.dataset import compute_dataset_metadata
 from ..utils import seed, optimize_tf_parallel_processing
 
 import multiprocessing
@@ -44,14 +42,13 @@ import multiprocessing
 NUM_PARALLEL_EXEC_UNITS = multiprocessing.cpu_count()
 
 
-def create_generator(args, preprocess_image, set_name=None):
+def create_generator(args, preprocess_image):
     """ Create generators for evaluation.
     """
     common_args = {
         'config'           : args.config,
         'image_min_side'   : args.image_min_side,
         'image_max_side'   : args.image_max_side,
-        'no_resize'        : args.no_resize,
         'preprocess_image' : preprocess_image,
         'shuffle_groups'   : False
     }
@@ -62,13 +59,13 @@ def create_generator(args, preprocess_image, set_name=None):
 
         validation_generator = CocoGenerator(
             args.coco_path,
-            'val2017' if set_name is None else set_name,
+            'val2017',
             **common_args
         )
     elif args.dataset_type == 'pascal':
         validation_generator = PascalVocGenerator(
             args.pascal_path,
-            'test' if set_name is None else set_name,
+            'test',
             image_extension=args.image_extension,
             **common_args
         )
@@ -76,13 +73,13 @@ def create_generator(args, preprocess_image, set_name=None):
         validation_generator = CSVGenerator(
             args.annotations,
             args.classes,
-            'test' if set_name is None else set_name,
+            'test',
             **common_args
         )
     elif args.dataset_type == 'kitti':
         validation_generator = KittiGenerator(
             args.kitti_path,
-            'val' if set_name is None else set_name,
+            'val',
             **common_args
         )
     else:
@@ -103,7 +100,7 @@ def parse_args(args):
 
     pascal_parser = subparsers.add_parser('pascal')
     pascal_parser.add_argument('pascal_path', help='Path to dataset directory (ie. /tmp/VOCdevkit).')
-    pascal_parser.add_argument('--image-extension',   help='Declares the dataset images\' extension.', default='.jpg')
+    pascal_parser.add_argument('--image_extension',   help='Declares the dataset images\' extension.', default='.jpg')
 
     csv_parser = subparsers.add_parser('csv')
     csv_parser.add_argument('annotations', help='Path to CSV file containing annotations for evaluation.')
@@ -119,21 +116,20 @@ def parse_args(args):
         return string.lower() in {"true", "yes", "y", "on"}
     
     parser.add_argument('--model',            help='Path to RetinaNet model.', required=True)
-    parser.add_argument('--convert-model',    help='Convert the model to an inference model (ie. the input is a training model).', type=bool_str, default=False)
+    parser.add_argument('--convert_model',    help='Convert the model to an inference model (ie. the input is a training model).', type=bool_str, default=False)
     parser.add_argument('--backbone',         help='The backbone of the model.', default='resnet50')
     parser.add_argument('--gpu',              help='Id of the GPU to use (as reported by nvidia-smi).', type=int)
-    parser.add_argument('--score-threshold',  help='Threshold on score to filter detections with (defaults to 0.05).', default=0.05, type=float)
-    parser.add_argument('--iou-threshold',    help='IoU Threshold to count for a positive detection (defaults to 0.5).', default=0.5, type=float)
+    parser.add_argument('--score_threshold',  help='Threshold on score to filter detections with (defaults to 0.05).', default=0.05, type=float)
+    parser.add_argument('--iou_threshold',    help='IoU Threshold to count for a positive detection (defaults to 0.5).', default=0.5, type=float)
     parser.add_argument('--nms_threshold',    help='NMS Threshold for two overlapping detections (defaults to 0.5).', default=0.5, type=float)
     parser.add_argument('--nms_mode',         help='How to merge two overlapping detections in NMS (defaults to "argmax").', default="argmax")
     parser.add_argument('--top_k',            help='Number of top scoring bboxes to keep in merge cluster when nms_mode is not "argmax"', type=int, default=-1)
-    parser.add_argument('--max-detections',   help='Max Detections per image (defaults to 100).', default=100, type=int)
-    parser.add_argument('--save-path',        help='Path for saving images with detections (doesn\'t work for COCO).')
-    parser.add_argument('--image-min-side',   help='Rescale the image so the smallest side is min_side.', type=int, default=800)
-    parser.add_argument('--image-max-side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=1333)
+    parser.add_argument('--max_detections',   help='Max Detections per image (defaults to 100).', default=100, type=int)
+    parser.add_argument('--save_path',        help='Path for saving images with detections (doesn\'t work for COCO).')
+    parser.add_argument('--image_min_side',   help='Rescale the image so the smallest side is min_side.', type=int, default=800)
+    parser.add_argument('--image_max_side',   help='Rescale the image if the largest side is larger than max_side.', type=int, default=1333)
     parser.add_argument('--config',           help='Path to a configuration parameters .ini file (only used with --convert-model).')
     parser.add_argument('--anchor_scale',     help='Scale the anchor boxes by this constant (e.g. if your objects are very small)', type=float, default=1.0)
-    parser.add_argument('--set_name',         help='Which partition of the dataset to evaluate on? (default: "test" or "val2017")')
     parser.add_argument('--eval_mode',        help='The way to perform evaluation, accepts "voc2012" (default) and "sar-apd"', 
                                               default="voc2012", const="voc2012", nargs="?", choices=("sar-apd", "voc2012"))
     parser.add_argument('--profile',          help="ADVANCED: Enable execution profiling to find bottlenecks in the program performance", 
@@ -159,19 +155,6 @@ def main(args=None):
         except AttributeError:
             raise ValueError("Cannot infer backbone from model name: " + base_name)
 
-    if "pascal_path" in vars(args):
-        path_key = "pascal_path"
-    else:
-        path_key = "coco_path"
-
-    arg_dict = vars(args)
-
-    if "SLURM_JOB_ID" in os.environ:
-        print("Slurm Job ID is", os.environ["SLURM_JOB_ID"])
-        arg_dict[path_key] = arg_dict[path_key].replace("UNIQUE_JOB_FOLDER", os.environ["SLURM_JOB_ID"])
-    else:
-        arg_dict[path_key] = arg_dict[path_key].replace("UNIQUE_JOB_FOLDER", "sar-uav-cv")
-
     # optionally seed random number generators
     if args.seed:
         seed(args.seed)    
@@ -196,7 +179,7 @@ def main(args=None):
 
     # create the generator
     backbone = models.backbone(args.backbone)
-    generator = create_generator(args, backbone.preprocess_image, args.set_name)
+    generator = create_generator(args, backbone.preprocess_image)
 
     # optionally load anchor parameters
     anchor_params = None
@@ -256,7 +239,6 @@ def main(args=None):
             print('No test instances found.')
             return
 
-        # print('Inference time for {:.0f} images: {:.4f}'.format(generator.size(), inference_time))
         print(f'Inferenced {generator.size():.0f} images')
         print(f'Average inference time per image: {inference_time:.4f} s')
         
