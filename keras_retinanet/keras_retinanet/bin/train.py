@@ -15,12 +15,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+os.environ["tf_gpu_allocator"]="cuda_malloc_async"
 
 # For 2x8 core Intel Xeon Gold 6134 @ 3.2GHz processor
 NUM_PARALLEL_EXEC_UNITS = 8
 
 import argparse
-import os
 import sys
 import warnings
 import numpy as np
