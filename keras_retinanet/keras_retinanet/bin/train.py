@@ -120,10 +120,10 @@ def create_models(backbone_retinanet, num_classes, weights, args):
     if args.multi_gpu > 1:
         from keras.utils import multi_gpu_model
         with tf.device('/cpu:0'):
-            model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, pyramid_levels=num_pyramid_levels, modifier=modifier), weights=weights, skip_mismatch=True)
+            model = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, num_pyramid_levels=num_pyramid_levels, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = multi_gpu_model(model, gpus=args.multi_gpu)
     else:
-        model          = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, pyramid_levels=num_pyramid_levels, modifier=modifier), weights=weights, skip_mismatch=True)
+        model          = model_with_weights(backbone_retinanet(num_classes, num_anchors=num_anchors, num_pyramid_levels=num_pyramid_levels, modifier=modifier), weights=weights, skip_mismatch=True)
         training_model = model
 
     # make prediction model
