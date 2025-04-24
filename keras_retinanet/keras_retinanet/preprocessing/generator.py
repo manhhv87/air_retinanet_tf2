@@ -177,12 +177,12 @@ class Generator(keras.utils.Sequence):
 
             # delete invalid indices
             if len(invalid_indices):
-                warnings.warn('Image {} with id {} (shape {}) contains the following invalid boxes: {}.'.format(
-                    self.image_path(group[index]),
-                    group[index],
-                    image.shape,
-                    annotations['bboxes'][invalid_indices, :]
-                ))
+                # warnings.warn('Image {} with id {} (shape {}) contains the following invalid boxes: {}.'.format(
+                #     self.image_path(group[index]),
+                #     group[index],
+                #     image.shape,
+                #     annotations['bboxes'][invalid_indices, :]
+                # ))
                 for k in annotations_group[index].keys():
                     annotations_group[index][k] = np.delete(annotations[k], invalid_indices, axis=0)
         return image_group, annotations_group
